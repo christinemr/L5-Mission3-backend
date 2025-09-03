@@ -34,7 +34,7 @@ app.post("/interview", async (req, res) => {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     // append user's latest response to history
-    const updatedHistory = [
+    const interviewHistory = [
       ...history,
       { role: "user", content: userResponse },
     ];
@@ -58,8 +58,10 @@ app.post("/interview", async (req, res) => {
     
     Here is the interview so far: ${interviewLog}}
     
-    Based on this conversation, ask the next follow-up question that is related to the role. keep it short and simple.
-    Conclude the interview on 5th questions, provide a brief feedback on how the candidate performed and how they can improve. Please respond in plain text only. Do not use asterisks, bold, or italic formatting.
+    Based on this conversation, ask the next follow-up question that is related to the role. keep it short and simple. 
+    the candidate might be nervous, suggest to make the environment more welcoming and relax, but do not repeat this every sentence, let user response and move on to next question.
+    Conclude the interview after 6 questions and provide a brief feedback on how the candidate performed and how they can improve. 
+    Please respond in plain text only. Do not use asterisks, bold, or italic formatting.
 
     `;
 
@@ -68,9 +70,12 @@ app.post("/interview", async (req, res) => {
     const geminiReply = geminiResponse.response.text();
 
     // add AI reply to history
-    interviewHistory.push({ role: "interviewer", content: geminiReply });
+    const updatedHistory = [
+      ...interviewHistory,
+      { role: "interviewer", content: geminiReply },
+    ];
 
-    res.json({ response: geminiReply });
+    res.json({ response: geminiReply, history: updatedHistory });
   } catch (error) {
     //error handling
     console.error("❌ error generating text ❌");
