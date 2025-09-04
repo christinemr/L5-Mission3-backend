@@ -164,6 +164,43 @@ app.post("/interview", async (req, res) => {
   }
 });
 
+app.post("/generate-background", async (req, res) => {
+  const { jobTitle } = req.body;
+  try {
+    const prompt = `Create a sleek, professional background for a job interview setting, specifically themed for a ${jobTitle} position. Use a dark, modern aesthetic with subtle gradients or textures to maintain focus while conveying professionalism and sophistication. Do not include any text or people in the image generated`;
+
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash-image-preview",
+    });
+
+    const result = await model.generateContent(prompt);
+
+    let imageBase64 = null;
+    if (
+      Array.isArray(result?.response?.candidates) &&
+      result.response.candidates.length > 0 &&
+      Array.isArray(result.response.candidates[0]?.content?.parts)
+    ) {
+      for (const part of result.response.candidates[0].content.parts) {
+        if (part.inlineData && part.inlineData.data) {
+          imageBase64 = part.inlineData.data;
+          break;
+        }
+      }
+    }
+
+    if (!imageBase64) {
+      throw new Error("No image data returned from Gemini API");
+    }
+
+    const imageUrl = `data:image/png;base64,${imageBase64}`;
+    res.json({ imageUrl });
+  } catch (err) {
+    console.error("Gemini image API error:", err);
+    res.status(500).json({ error: "Failed to generate background" });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
