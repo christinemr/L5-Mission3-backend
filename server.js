@@ -43,7 +43,7 @@ app.post("/interview", async (req, res) => {
 
     // keep interview history into a transcript for Gemini - to keep convo flow naturally
     // using array map to loop thru each msg in (updatedHistory) & turn into a single string
-    // ternary expression to check the role
+    // ternary expression to check their role and label accordingly
     const interviewLog = interviewHistory
       .map(
         (message) =>
