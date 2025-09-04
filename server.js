@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
+// init express
 const app = express();
 app.use(express.json());
 
@@ -18,8 +19,9 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 // middleware
 app.use(cors({ origin: "http://localhost:5173" }));
 
+// endpoint - post req
 app.post("/interview", async (req, res) => {
-  // extract job title & user's response from the request body
+  // extract job title, name & user's response from the request body
   const { jobTitle, name, userResponse, history = [] } = req.body;
 
   // error handling - if either one input is missing
@@ -40,7 +42,7 @@ app.post("/interview", async (req, res) => {
     ];
 
     // keep interview history into a transcript for Gemini - to keep convo flow naturally
-    // using array map to loop thru each msg in (updatedHistory) & turn into a single strings
+    // using array map to loop thru each msg in (updatedHistory) & turn into a single string
     // ternary expression to check the role
     const interviewLog = interviewHistory
       .map(
@@ -51,8 +53,7 @@ app.post("/interview", async (req, res) => {
       )
       .join("\n");
 
-    // TODO: add prompt msg & bg theme ⬇️
-    // This is a test prompt—remove or replace before prod
+    // *This is a test prompt—remove or replace before prod*
     // Split prompt into 2 parts so AI doesnt get confused by initial prompt.
     const initialPrompt = `
       Persona
@@ -94,12 +95,11 @@ app.post("/interview", async (req, res) => {
     //                Filter for messages with role "interviewer" and a "?" in the content.
 
     const interviewerQuestions = interviewHistory.filter(
-      (message) =>
-        message.role === "interviewer" && message.content.includes("?")
+      (message) => message.role === "interviewer"
     ).length;
 
     // Determine if the interview has reached its final turn. (max 6 questions)
-    const isFinalTurn = interviewerQuestions >= 6;
+    const isFinalTurn = interviewerQuestions === 6;
 
     const feedbackPrompt = `
     Persona
@@ -127,13 +127,12 @@ app.post("/interview", async (req, res) => {
     ${interviewLog}
     `;
 
-    // Construct the prompt based on interview phase.
-    // Storing in an array and use join method
+    // Construct the prompt based on interview phase. Storing in an array and use join method
     const followUpPrompt = [
-      initialPrompt,
-      "Conversation so far:",
-      interviewLog,
-      "Continue as Tina.",
+      initialPrompt, // set up Tina's persona, rules and instruction
+      "Conversation so far:", // header to introduce interview transcript
+      interviewLog, // contains full transcripts between user and interviewer
+      "Continue as Tina.", // signal Gemini to stay in the character and generate next question
     ].join("\n\n");
 
     // old code
@@ -145,10 +144,13 @@ app.post("/interview", async (req, res) => {
     const prompt = isFinalTurn ? feedbackPrompt : followUpPrompt;
 
     // generate AI response and reply
+    // sends prompt to Gemini
     const geminiResponse = await model.generateContent(prompt);
+
+    // Gemini's responses
     const geminiReply = geminiResponse.response.text();
 
-    // add AI reply to history
+    // store Gemini's reply to history
     const updatedHistory = [
       ...interviewHistory,
       { role: "interviewer", content: geminiReply },
